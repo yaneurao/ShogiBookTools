@@ -1,6 +1,13 @@
 import os, sys
 sys.path.append(os.path.abspath('.')) # ⇑ script/ から実行するおまじない。
 
+"""
+lmdbと言うDBにいったん格納して、それを書き出すことによって、定跡DBのsortを実現しています。
+
+lmdbは、B+Treeで実装されているので、SFEN文字列をkeyとして書き出して、lmdbからcursor(iterator)を
+もらって順番に列挙するだけでsortが実現できます。
+"""
+
 from YaneBookLib.BookIO import *
 from YaneBookLib.LmdbConnection import *
 
@@ -22,5 +29,5 @@ with BookReader("book/user_book1.db") as reader:
 # (lmdbはB+Tree構造で格納されているのでkeyでsortされることは保証されているから)
 with BookWriter("book/user_book1-sorted.db") as writer:
     with db.create_transaction(write=False) as txn:
-        for (sfen, node) in txn.cursor():
+        for (sfen, node) in txn.booknode_cursor():
             writer.write(sfen, node)

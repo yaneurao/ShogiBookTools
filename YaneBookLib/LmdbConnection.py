@@ -71,8 +71,11 @@ class LMDBTransaction:
         self.close()
 
     def cursor(self):
-        return LMDBCursor(self.txn.cursor())
+        return self.txn.cursor()
     
+    def booknode_cursor(self):
+        return LMDBCursor(self.txn.cursor())
+
     def stat(self):
         return self.txn.stat()
 
