@@ -19,7 +19,7 @@ def trim_sfen(sfen:str)->Sfen:
 
     return " ".join(s)
 
-class BookReader:
+class StandardBookReader:
     def __init__(self, filename:str):
         self.filename = filename
         self.file : io.TextIOWrapper | None = None
@@ -94,7 +94,7 @@ class BookReader:
         self.peeked_line = None
         return self.peek_line()
 
-class BookWriter:
+class StandardBookWriter:
     def __init__(self, filename:str):
         self.filename = filename
         self.file : io.TextIOWrapper | None = None
