@@ -47,6 +47,23 @@ with StandardBookWriter("book/user_book2.db") as writer:
     for sfen, node in book_nodes.items():
         writer.write(sfen, node)
 ```
+StandardBookReaderで読み込んだものを元の形式でファイルに書き出すwriterです。
+
+### UsiKifToSfens
+
+- [usi_kif_to_sfens_test.py](test-script/usi_kif_to_sfens_test.py)
+
+```Python
+from YaneBookLib.BookCommon import *
+
+for line in open('book/kif20240114.txt','r'):
+    # 1行が1つの棋譜
+    for sfen in UsiKifToSfens(line):
+        # それぞれの局面をsfen形式で出力(先頭に"sfen"の文字は無し)
+        print(sfen)
+```
+
+"startpos moves 2g2f 8c8d 7g7f 8d8e"のようなUSIプロトコルで用いるPosition文字列を一つの棋譜とみなして、それぞれに出現した局面のSFEN文字列の配列を返します。
 
 ### かきかけ。
 

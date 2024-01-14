@@ -1,28 +1,15 @@
 import io
 from YaneBookLib.BookCommon import *
 
-def trim_sfen(sfen:str)->Sfen:
-    ''' "sfen"で開始される形式のsfen文字列(ただし先頭の"sfen"は含まず)に対して、末尾の手数を取り除いて返す。 '''
-    s = sfen.split()
-
-    # 先頭にsfenが含まれていたら除去
-    if s[0] == 'sfen':
-        del s[0]
-
-    try:
-        # 末尾が数字なのかテストする
-        int(s[-1])
-        del s[-1]
-    except:
-        # 数字が付与されてないんじゃ？
-        pass
-
-    return " ".join(s)
-
 class StandardBookReader:
+    """やねうら王標準定跡フォーマットの読み込みclass"""
     def __init__(self, filename:str):
+        # openするfilepth
         self.filename = filename
+        # openしているfile handle
         self.file : io.TextIOWrapper | None = None
+        # 定跡局面の指し手に付随しているdepthを無視するかどうか
+        self.ignore_depth : bool = True
 
     def open(self, filename:str):
         self.file = open(filename, mode='r', encoding='utf-8')
@@ -71,13 +58,20 @@ class StandardBookReader:
                     if not line or line.startswith('sfen'):
                         return (sfen, book_node)
                     self.get_line() # feed
-                    move, _, eval, *_ = line.split()
-                    book_node += (move, int(eval)),
-
+                    if self.ignore_depth:
+                        move, _, eval, *_ = line.split()
+                        book_node += (move, int(eval)),
+                    else:
+                        move, _, eval, depth, *_ = line.split()
+                        book_node += (move, int(eval), int(depth)),
 
     def close(self):
         if self.file:
             self.file.close()
+
+    def set_ignore_depth(self, b:bool):
+        '''定跡局面に付随しているdepthを無視するのかどうかのフラグを変更する。デフォルトではtrue。(無視する)'''
+        self.ignore_depth = b
 
     def peek_line(self)->str|None:
         '''1行先読み用'''
@@ -95,6 +89,7 @@ class StandardBookReader:
         return self.peek_line()
 
 class StandardBookWriter:
+    """やねうら王標準定跡フォーマットの書き込みclass"""
     def __init__(self, filename:str):
         self.filename = filename
         self.file : io.TextIOWrapper | None = None
@@ -119,5 +114,5 @@ class StandardBookWriter:
     def write(self, sfen:str, node:BookNode):
         """ 定跡局面を1つ書き出す """
         self.writeline(f"sfen {sfen}")
-        for move, eval in node:
-            self.writeline(f"{move} None {eval} 0")
+        for move, eval , *etc in node:
+            self.writeline(f"{move} None {eval} {etc[0] if etc else 0}")
