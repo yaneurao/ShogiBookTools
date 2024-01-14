@@ -1,6 +1,3 @@
-import os, sys
-sys.path.append(os.path.abspath('.')) # ⇑ test-script/ から実行するおまじない。
-
 """
 1. 
 定跡DBと棋譜(sfen ... moves ...もしくはstartpos moves ...形式)が与えられた時に、
@@ -31,21 +28,34 @@ bestmoveが置き換わり、その局面のbestmoveの先が掘れていない�
 
 YaneBookLibのサンプルとしてもちょうどいい感じの処理内容なので参考になるかと思います。
 """
+# ============================================================
+
+# 棋譜ファイルのpath
+KIF_FILE_PATH  = 'book/kif20240114.txt'
+
+# 定跡DBのpath
+BOOK_FILE_PATH = "book/user_book1-peta20240114.db"
+
+# ============================================================
+
+import os, sys
+sys.path.append(os.path.abspath('.')) # ⇑ test-script/ から実行するおまじない。
 
 from YaneBookLib.BookIO import *
 
 sfens : set[str] = set()
-for line in open('book/kif20240114.txt','r'):
+for line in open(KIF_FILE_PATH,'r'):
     # 1行が1つの棋譜
     for sfen in UsiKifToSfens(line):
         # それぞれの局面をsfen形式でset()に格納。
+        # (重複削除したいので、末尾にある手数を削除してsetで管理)
         sfens.add(trim_sfen(sfen))
 
 print(f"kif .. {len(sfens)} sfens.")
 
 board = Board()
 with open('checked_sfens.txt','w') as fw:
-    with StandardBookReader("book/user_book1-peta20240114.db") as reader:
+    with StandardBookReader(BOOK_FILE_PATH) as reader:
         # 定跡DBのdepthも読み込む。
         reader.set_ignore_depth(False)
         for i, book_node in enumerate(reader,1):
@@ -57,7 +67,9 @@ with open('checked_sfens.txt','w') as fw:
             # 末尾の手数の削除
             trimmed_sfen = trim_sfen(sfen)
             if trimmed_sfen in sfens:
-                # bestmoveのdepthが1であるかを調べる。
+
+                # 条件1)
+                # bestmoveのdepthが0であるかを調べる。
                 # nodeはlist[move, eval, depth]の順であるはず
                 # 指し手が2つ以上あり、bestmoveのdepth == 0なら、掘れていないのでこの指し手を延長する。
                 # ただし、abs(eval) >= 600は延長しない。(そんなところ延長しても…。)
@@ -71,3 +83,7 @@ with open('checked_sfens.txt','w') as fw:
                     sfen = trim_sfen(board.sfen())
                     fw.write(sfen + '\n')
 
+                # 条件2)
+                # bestmoveと2つ目以降の指し手の差が、初期局面で50、gameply(初期局面からの手数)が100で100
+                # 以内の指し手で展開されていない(depth = 0)の指し手を展開する。
+                # →　元のsfenに手数がついてないから無理っぽ…。

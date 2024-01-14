@@ -18,9 +18,9 @@ YaneBookLibは、Pythonで書かれた、やねうら王の定跡DB処理用の�
 
 ここで公開しているツールセットは、間接的にこのライブラリを利用しています。
 
-- [YaneBookLib ドキュメント](doc/YaneBookLib_document.md)
+- [YaneBookLib ドキュメント](doc/YaneBookLib.md)
 
-例えば、以下のように書くだけで、定跡DBに対して、book_node(1つの局面)として SFEN文字列と、それに対応する(指し手文字列,評価値)のlistが返ってきます。
+例えば、以下のように書くだけで、定跡DBに対して、book_node(1つの局面)として SFEN文字列と、それに対応する(指し手文字列,評価値)のlistが返ってきます。Pythonが使える人ならば、便利に使えると思います。活用してみてください。
 
 ```Python
 from YaneBookLib.BookIO import *
@@ -31,28 +31,16 @@ with StandardBookReader("book/user_book1.db") as reader:
         # ('ln2k2nl/1r2g1gs1/p1pspp1p1/6p1p/1p1pbP1S1/2PP5/PPBSP1P1P/2G4R1/LN2KG1NL w P', [('2a3c', 37), ('8e8f', -4)]) みたいなのが表示される。
 ```
 
+## Sample
+
+- [book_checker.py](test-script/book_checker.py) : ペタショック化後の定跡DBに対してbestmoveなのにdepth 0の指し手を探すためのチェッカー。
+- かきかけ
+
 ## Book Tools
 
-- [book_checker1.py](sample-script/book_checker1.py) : ペタショック化後の定跡DBに対してbestmoveなのにdepth 0の指し手を探すためのチェッカー。
-- かきかけ
+巨大定跡に対するsort、merge、gamePlyの追加など各種ツールが揃っています。
 
-## かきかけ。
-
-かきかけ
-
-## 用意されている定跡操作用のPythonのスクリプト
-
-- BookSort : SFEN文字列のsortを行う
-- BookMerge : 2つの定跡DBのmerge(結合)を行う
-- かきかけ
-
-### BookSort
-
-これを行うのが、BookSortです。
-
-使い方は以下のようになります。
-
-かきかけ
+- [BookTools ドキュメント](doc/BookTools.md)
 
 # ライセンス
 

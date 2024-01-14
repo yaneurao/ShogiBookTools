@@ -1,6 +1,9 @@
-import lmdb
 import pickle
+import os
+import shutil
 from typing import Any
+
+import lmdb
 from YaneBookLib.BookCommon import *
 
 class LMDBConnection:
@@ -16,7 +19,16 @@ class LMDBConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def open(self):
+    def open(self, new_db : bool= False):
+        """
+        DBをopenする。
+        new_db = Trueにすると元あったものは削除する。(フォルダごと削除)
+        """
+        if new_db:
+            # 既存のデータベースがあれば削除
+            if os.path.exists(self.path):
+                shutil.rmtree(self.path)
+
         self.env = lmdb.open(self.path, sync=True, map_size = self.map_size)
         # sync == Trueを指定すると、即座にdiskに書き込むのでこれはTrueが好ましい。
 
