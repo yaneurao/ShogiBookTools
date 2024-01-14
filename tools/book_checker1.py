@@ -32,11 +32,42 @@ bestmoveが置き換わり、その局面のbestmoveの先が掘れていない�
 YaneBookLibのサンプルとしてもちょうどいい感じの処理内容なので参考になるかと思います。
 """
 
-import cshogi
-
 from YaneBookLib.BookIO import *
-# BookReaderを用いて、やねうら王形式の定跡ファイルの1局面ずつの読み込みができる。
-with StandardBookReader("book/user_book1.db") as reader:
-    for book_node in reader:
-        print(book_node)
+
+sfens : set[str] = set()
+for line in open('book/kif20240114.txt','r'):
+    # 1行が1つの棋譜
+    for sfen in UsiKifToSfens(line):
+        # それぞれの局面をsfen形式でset()に格納。
+        sfens.add(trim_sfen(sfen))
+
+print(f"kif .. {len(sfens)} sfens.")
+
+board = Board()
+with open('checked_sfens.txt','w') as fw:
+    with StandardBookReader("book/user_book1-peta20240114.db") as reader:
+        # 定跡DBのdepthも読み込む。
+        reader.set_ignore_depth(False)
+        for i, book_node in enumerate(reader,1):
+            # progress
+            if i % 100000 == 0:
+                print(i)
+            
+            sfen , node = book_node
+            # 末尾の手数の削除
+            trimmed_sfen = trim_sfen(sfen)
+            if trimmed_sfen in sfens:
+                # bestmoveのdepthが1であるかを調べる。
+                # nodeはlist[move, eval, depth]の順であるはず
+                # 指し手が2つ以上あり、bestmoveのdepth == 0なら、掘れていないのでこの指し手を延長する。
+                # ただし、abs(eval) >= 600は延長しない。(そんなところ延長しても…。)
+                if len(node) >= 2 and node[0][2] == 0 and abs(node[0][1]) < 600: # type:ignore
+                    board.set_position('sfen ' + sfen)
+                    # 目視確認のためにnodeをprintしてみる。
+                    print(node)
+                    # bestmoveで1手進める。
+                    board.push_usi(node[0][0])
+                    # この局面のsfenをファイルに書き出す。手数は削除しておく。
+                    sfen = trim_sfen(board.sfen())
+                    fw.write(sfen + '\n')
 

@@ -17,6 +17,7 @@
 book/
 *.pyc
 *.mdb
+資料/
 
 # User-specific files
 *.suo

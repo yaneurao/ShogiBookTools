@@ -56,6 +56,8 @@ class StandardBookReader:
                     line = self.peek_line()
                     # 終端か次のsfenに達した。
                     if not line or line.startswith('sfen'):
+                        # book_node、evalの値で降順sortしておく。(評価値順に並んで欲しいため)
+                        book_node.sort(key=lambda x: x[1], reverse=True)
                         return (sfen, book_node)
                     self.get_line() # feed
                     if self.ignore_depth:
