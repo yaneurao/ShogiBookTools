@@ -6,6 +6,12 @@ YaneBookLibは、Pythonで書かれた、やねうら王の定跡DB処理用の�
 
 YaneBookLibにあるいくつかの便利なclassについて紹介しておきます。Pythonが使える人ならば重宝することでしょう。
 
+# 定跡処理関係
+
+- StandardBookReader : やねうら王の標準定跡形式のReader(ファイルから読み込み)
+- StandardBookWriter : やねうら王の標準定跡形式のWriter(ファイルに書き出し)
+- UsiKifToSfens : USIのposition文字列をSFEN文字列のlistにする。
+
 ## StandardBookReader
 
 - [standard_book_reader_test.py](test-script/standard_book_reader_test.py)
@@ -50,3 +56,14 @@ for line in open('book/kif20240114.txt','r'):
 ```
 
 "startpos moves 2g2f 8c8d 7g7f 8d8e"のようなUSIプロトコルで用いるposition文字列("position"コマンドとして渡す文字列)を一つの棋譜とみなして、それぞれに出現した局面のSFEN文字列を返します。
+
+# Collections
+
+巨大な定跡を操作するためには、メモリを使わずにQueue構造やStack構造などを用いるアルゴリズムを使いたいことがあり、そのためにLMDBを用いたコンテナを用意している。
+
+| コンテナ名 | データ構造 | サンプル |
+|-|-|-|
+|LMDBQueue | Queue | [lmdb_queue_test.py](../test-script/lmdb_queue_test.py)|
+
+
+

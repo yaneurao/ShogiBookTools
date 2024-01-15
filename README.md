@@ -33,14 +33,17 @@ with StandardBookReader("book/user_book1.db") as reader:
 
 ## Sample
 
-- [book_checker.py](test-script/book_checker.py) : ペタショック化後の定跡DBに対してbestmoveなのにdepth 0の指し手を探すためのチェッカー。
-- かきかけ
-
-## Book Tools
-
 巨大定跡に対するsort、merge、gamePlyの追加など各種ツールが揃っています。
 
-- [BookTools ドキュメント](doc/BookTools.md)
+- [BookSample ドキュメント](doc/BookSample.md) 
+
+## Book Maintenance Tool
+
+- [BookMaintenanceTool ドキュメント](doc/book_maintenance.md)
+
+主力のメンテナンスツールです。
+
+対話型環境でやねうら王標準定跡DBをLMDBに読み込んだり、書き出したり、加工したり、抽出したりなど様々な操作ができます。
 
 # ライセンス
 

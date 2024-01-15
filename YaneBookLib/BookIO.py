@@ -118,3 +118,4 @@ class StandardBookWriter:
         self.writeline(f"sfen {sfen}")
         for move, eval , *etc in node:
             self.writeline(f"{move} None {eval} {etc[0] if etc else 0}")
+

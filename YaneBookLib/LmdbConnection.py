@@ -116,6 +116,9 @@ class LMDBTransaction:
                 return value
         return None
 
+    def delete(self, key:bytes):
+        self.txn.delete(key)
+
     def close(self):
         # 親切でcommitしておいてやる。
         self.commit()

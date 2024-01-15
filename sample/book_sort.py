@@ -15,6 +15,7 @@ import argparse
 
 from YaneBookLib.BookIO import *
 from YaneBookLib.LmdbConnection import *
+from YaneBookLib.BookTools import *
 
 # ArgumentParser の作成
 parser = argparse.ArgumentParser(description='Process a file path and a map size.')
@@ -35,25 +36,16 @@ print("Create a temporary DB.")
 db = LMDBConnection(db_folder, map_size = map_size)
 db.open(new_db=True)
 
+# 読み込む
 READ_FILE_PATH = args.read_file_path
 print(f"Read {READ_FILE_PATH} into a temporary DB.")
-# BookReaderを用いて、やねうら王形式の定跡ファイルの1局面ずつの読み込みができる。
-with StandardBookReader(READ_FILE_PATH) as reader:
-    reader.set_ignore_depth(args.ignore_depth)
+read_standard_db_book_to_lmdb_book(db, READ_FILE_PATH, ignore_depth=args.ignore_depth)
 
-    # DBのトランザクションを作る
-    with db.create_transaction(write=True) as txn:
-        for book_node in reader:
-            sfen , node = book_node
-            txn.put_booknode(sfen, node)
-
+# 書き出す
 WRITE_FILE_PATH = args.write_file_path
 print(f"Write a temporary book into {WRITE_FILE_PATH}.")
-# 書き出したファイルを読み込めばSFEN文字列でsortされている。
-# (lmdbはB+Tree構造で格納されているのでkeyでsortされることは保証されているから)
-with StandardBookWriter(WRITE_FILE_PATH) as writer:
-    with db.create_transaction(write=False) as txn:
-        for (sfen, node) in txn.booknode_cursor():
-            writer.write(sfen, node)
+write_lmdb_book_to_standard_book(db, WRITE_FILE_PATH)
+
+# これだけで並び替えが完了する。
 
 print("done.")
