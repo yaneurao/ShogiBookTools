@@ -47,6 +47,13 @@ class LMDBConnection:
             self.env.close()
             self.env = None
 
+    def is_opened(self)->bool:
+        """
+        DBがopenされているかを返す。
+        self.envがNoneでなければopen()されてclose()されていない
+        """
+        return not self.env is None
+
     def info(self)->dict[str,str]:
         if self.env:
             return self.env.info()

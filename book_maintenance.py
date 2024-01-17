@@ -13,6 +13,9 @@ from YaneBookLib.BookTools import *
 # LMDBのフォルダ。ここに番号のサブフォルダが作られる。
 DB_FOLDER = "lmdb/"
 
+# 1Gを表す定数
+GB = 1024 * 1024 * 1024
+
 # ============================================================
 
 def make_db_path(n : int)->str:
@@ -22,19 +25,33 @@ def make_db_path(n : int)->str:
     """
     return DB_FOLDER + str(n)
 
-def open_db(db_path: str)->LMDBConnection:
+def open_db(db_path: str, map_size:int | None = None)->LMDBConnection:
     """LMDBをopenする。"""
-    map_size = 1 * 1024 * 1024 * 1024 # default 1GB
     mdb_path = db_path + "/data.mdb"
     # すでにDBファイルがあるなら、そのファイルサイズをmap_sizeとして指定してやる。
-    if os.path.exists(mdb_path):
-        map_size = os.path.getsize(mdb_path)
+    if map_size is None:
+        if os.path.exists(mdb_path):
+            map_size = os.path.getsize(mdb_path)
+        else:
+            map_size = 1 * GB # default 1GB if map_size is None
+    else:
+        map_size *= GB # 単位は[GB]なので1Gを掛け算する。
     if not os.path.exists(db_path):
         print(f"DB is not exists, so create {db_path}")
+
     db = LMDBConnection(db_path, map_size)
     db.open()
-    print(f"open {db_path} DB, map_size = {map_size}")
+    print(f"open {db_path} DB, map_size = {map_size // GB} GB", end="")
+    with db.create_transaction() as txn:
+        entries = txn.stat()['entries'] # type:ignore
+        print(f", entries = {entries}")
     return db
+
+def close_db(db:LMDBConnection, db_path:str):
+    """ DBをcloseする(openされていたならば) """
+    if db.is_opened():
+        print(f"close {db_path}")
+        db.close()
 
 
 def main():
@@ -60,13 +77,15 @@ def main():
 
             if command == 'quit':
                 # プログラムを終了する。
-                print("quit program")
+                print("quit..")
                 break
+
             elif command == 'stat':
                 # DBの統計情報を出力
                 with db.create_transaction() as txn:
                     entries = txn.stat()['entries'] # type:ignore
-                print(f"folder = {DB_FOLDER}{db_number}, map_size = {db.info()['map_size']} bytes, entries = {entries} SFENS")
+                print(f"folder = {DB_FOLDER}{db_number}, map_size = {db.info()['map_size']//GB} GB, entries = {entries}") # type:ignore
+
             elif command == 'clear':
                 # DBの内容をクリア(ファイルは消さない)
                 with db.create_transaction(write=True) as txn:
@@ -77,15 +96,23 @@ def main():
                 db.close()
                 shutil.rmtree(db_path)
                 print(f"drop {db_path}")
+
             elif command == 'read':
                 # LMDBにやねうら王の定跡ファイルを読み込む
                 if len(commands) < 2:
                     print("Error! : book_path needed")
                     continue
                 book_path = commands[1]
-                print(f"read book : {book_path} , ignore depth = {ignore_depth}")
-                read_standard_db_book_to_lmdb_book(db, book_path, ignore_depth=True)
-                print("read book done")
+                read_standard_book_to_lmdb_book(db, book_path, ignore_depth=ignore_depth, progress=True)
+
+            elif command == "write":
+                # LMDBからやねうら王の定跡ファイルに書き出す。
+                if len(commands) < 2:
+                    print("Error! : book_path needed")
+                    continue
+                book_path = commands[1]
+                write_lmdb_book_to_standard_book(db, book_path, progress=True)
+
             elif command == "ignore_depth":
                 # ignore_depthの値を変更。
                 if len(commands) < 2:
@@ -93,10 +120,20 @@ def main():
                     continue
                 ignore_depth = commands[1].lower() == "true"
                 print(f"ignore_depth = {'True' if ignore_depth else 'False'}")
+
+            elif command == "map_size":
+                # map_sizeの変更
+                if len(commands) < 2:
+                    print("Error! : map_size needed!")
+                    continue
+                map_size = int(commands[1])
+                # map_sizeを指定してopenしなおす。
+                close_db(db, db_path=db_path)
+                db = open_db(db_path, map_size = map_size)
+
             elif command.isdigit():
                 # DBの切り替え
-                print(f"close {db_path}")
-                db.close()
+                close_db(db, db_path=db_path)
                 db_number = int(command)
                 db_path = make_db_path(db_number)
                 db = open_db(db_path)
