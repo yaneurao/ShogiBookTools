@@ -39,13 +39,19 @@ class LMDBConnection:
         """
         if self.env:
             txn = self.env.begin(write=write)
-            return LMDBTransaction(txn)
+            return LMDBTransaction(self.env, txn)
         return None
 
     def close(self):
         if self.env:
             self.env.close()
             self.env = None
+
+    def info(self)->dict[str,str]:
+        if self.env:
+            return self.env.info()
+        else:
+            raise RuntimeError("DB is not opened.")
 
 class LMDBCursor:
     def __init__(self, cursor):
@@ -73,7 +79,13 @@ class LMDBTransaction:
     このclassのinstanceは、LMDBConnection.create_transaction()によって生成される。
     これ以外の方法で作らないようにすること。
     """
-    def __init__(self, txn):
+    def __init__(self, env, txn):
+        """
+        このオブジェクトは、LMDBConnectionを用いて生成すること。
+        env : openしたDB
+        txn : LMDBのtransaction
+        """
+        self.env = env
         self.txn = txn
 
     def __enter__(self):
@@ -122,6 +134,16 @@ class LMDBTransaction:
     def close(self):
         # 親切でcommitしておいてやる。
         self.commit()
+
+    def drop(self):
+        """
+        DBの内容をクリアする。
+        """
+        db = self.env.open_db()
+        # delete=Trueにしてもファイルは消えない。
+        # ファイル消したいならos.remove()で消すしか…。
+        self.txn.drop(db=db, delete=False)
+
 
 # 使用例
 

@@ -13,22 +13,62 @@
 コマンド一覧(実行後に使えるコマンド)
 
 
-|コマンド|意味|使い方|例|説明|
-|--|--|--|--|--|
-|r|Read a book|r [定跡PATH]|r book/user_book1.db|やねうら王形式の定跡DBのLMDBへの読み込み|
-|w|Write a book|w [定跡PATH]|w book/user_book2.db|やねうら王形式の定跡DBのLMDBへの書き出し|
-|c|Create a LMDB|c [map_size]|c 3| LMDBのデータベースの作成。map sizeは[GB]単位|
-|d|Delete a LMDB|d|d | 作成してあったLMDBのデータベースの削除|
-|p|PV|p|p| LMDBに読み込ませたデータベースのPV(最善応手列)を求める|
-|rb|Read a Black book|rb [定跡PATH]|rb book/black_book.db|rコマンドの、先手の局面しか読み込まない版|
-|rw|Read a White book|rw [定跡PATH]|rw book/white_book.db|rコマンドの、後手の局面しか読み込まない版|
-|wb|Write a Black book|wb [定跡PATH]|wb book/black_book.db|wコマンドの、先手の局面しか書き出さない版|
-|ww|Write a White book|ww [定跡PATH]|ww book/white_book.db|wコマンドの、後手の局面しか書き出さない版|
+|コマンド|使い方|例|説明|
+|--|--|--|--|
+|数字|[数字]|3|LMDBのN番目のフォルダに切り替える。Nは任意の数。例えば3を指定すると lmdb-3/ と言うデータベースフォルダが自動的に作成されます|
+|db mapsize|db mapsize [map_size]|db mapsize 3| LMDBのデータベースのマップサイズの変更。map sizeは[GB]単位。デフォルトは1[GB]|
+|db delete|db delete| db delete | 作成してあったLMDBのデータベースの削除 |
+|stat|stat|stat| LMDBに格納されている定跡の統計情報(局面数など)を出力|
+|read book|read book [定跡PATH]|read book book/user_book1.db|やねうら王形式の定跡DBのLMDBへの読み込み|
+|write book|write book [定跡PATH]|write book book/user_book2.db|やねうら王形式の定跡DBのLMDBへの書き出し|
+|pv|pv|pv| LMDBに読み込ませたデータベースのPV(最善応手列)を求める|
+|read black|read black [定跡PATH]|read black book/black_book.db|readコマンドの、先手の局面しか読み込まない版|
+|read white|read white [定跡PATH]|read white book/white_book.db|readコマンドの、後手の局面しか読み込まない版|
+|write black|write black [定跡PATH]|write black book/black_book.db|writeコマンドの、先手の局面しか書き出さない版|
+|write white|write white [定跡PATH]|write white book/white_book.db|writeコマンドの、後手の局面しか書き出さない版|
+
+
+LMDBのデータベースのフォルダは番号で管理されています。起動時は0です。これは lmdb-0/ というフォルダをLMDBのデータベースフォルダにする(このフォルダがなければ作成する)という意味です。
+
+起動時に
+
+> [0] 
+
+このように表示されているのは、いま、データベースのターゲットが0(lmdb-0)になっているという意味です。(read bookコマンドやwrite bookコマンドは現在のターゲットに対して行われます。)
 
 活用例
-- cコマンドでLMDBのデータベースを作成し、rコマンドで定跡を読み込んでwコマンドで定跡を書き出すと、局面のSFEN文字列でsortされている定跡ファイル書き出されるので、sortの代用となります。
-- cコマンドでLMDBのデータベースを作成し、rコマンドを複数回使って複数の定跡をLMDBに読み込み、wで書き出すと、定跡のmerge(結合)を行ったことになります。
-- cコマンドでLMDBのデータベースを作成し、rコマンドで定跡を読み込んで、pコマンドでPV(最善応手列)を求めることができます。(USIプロトコルの"startpos moves ..."の形式の棋譜として書き出すことができます。)
-- cコマンドでLMDBのデータベースを作成し、rbコマンドで先手の局面だけ角換わりの定跡を読み込み、rwコマンドで後手の局面だけ相掛かりの定跡を読み込み、wコマンドで書き出すことで、先手と後手との定跡をマージすることができます。
+- 定跡DBをsortしたい　⇨　read bookコマンドで定跡を読み込んでwrite bookコマンドで定跡を書き出すと、局面のSFEN文字列でsortされている定跡ファイル書き出されるので、sortの代用となります。
+- 定跡DBをmergeしたい　⇨　readコマンドを複数回使って複数の定跡をLMDBに読み込み、write bookで書き出すと、定跡のmerge(結合)を行ったことになります。
+- 定跡DBのPVを調べたい　⇨　readコマンドで定跡を読み込んで、pvコマンドでPV(最善応手列)を求めることができます。(USIプロトコルの"startpos moves ..."の形式の棋譜として書き出すことができます。)
+- 先手と後手で別の定跡DBを組み合わせたい　⇨　read blackコマンドで先手の局面だけ角換わりの定跡を読み込み、read whiteコマンドで後手の局面だけ相掛かりの定跡を読み込み、write bookコマンドで書き出すことで、先手と後手との定跡をマージすることができます。
+- LMDBの0番のデータベースが格納されているフォルダ lmdb-0/ の内容をクリアして再度作成したい　⇨　db clear としてから 0 (これはDBを lmdb-0 に切り替えるが、存在しなければ作成されるので、これで作成される。)
+- LMDBのサイズが足りないみたいなので大きくしたい　⇨　db mapsize 10 (DBのサイズを10GBにする)
 
+💡　定跡DBのPATHは、"my book/book.db"のようにダブルコーテーションで囲って1つのPATHを指定することもできます。
 
+実際のコマンド例
+
+```
+# やねうら王のDBファイルをsortしたい
+[0] read book book/user_book1.db
+[0] write book book/user_book1-sorted.db
+
+# やねうら王のDBファイルをmergeしたい
+[0] read book book/user_book1.db
+[0] read book book/user_book2.db
+[0] write book book/user_book-merged.db
+
+# 角換わりの先手の局面と相掛かりの後手の局面を組み合わせた定跡DBを作りたい
+[0] read black book/kaku.db
+[0] read white book/aigakari.db
+[0] write book book/mixed-book.db
+
+# 定跡のPVを書き出したい
+[0] read book book/user_book1.db
+[0] pv
+
+# 定跡の局面数を集計したい
+[0] read book book/user_book1.db
+[0] stats
+
+```

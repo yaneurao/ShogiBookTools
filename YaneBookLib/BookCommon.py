@@ -105,9 +105,10 @@ class Board:
     
     def set_position(self,position_str:str):
         '''局面を設定する。'''
-        OK = self.board.set_position(position_str)
-        if not OK:
-            raise ValueError('Illegal Position')
+        try:
+            self.board.set_position(position_str)
+        except:
+            raise ValueError(f'Illegal Position : {position_str}')
 
     @property
     def turn(self)->int:

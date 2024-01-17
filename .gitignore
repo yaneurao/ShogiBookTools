@@ -18,6 +18,8 @@ book/
 *.pyc
 *.mdb
 資料/
+lmdb/
+dev-script/
 
 # User-specific files
 *.suo
