@@ -131,6 +131,20 @@ def main():
                 close_db(db, db_path=db_path)
                 db = open_db(db_path, map_size = map_size)
 
+            elif command == "shrink":
+                # 定跡局面の指し手から、最善手と同じ評価値を持つもの以外の指し手を削除する
+
+                # ⇑のような関数を書く。
+                def modify_shrink(node:BookNode)->BookNode:
+                    for i in range(1, len(node)):
+                        # 何番目までが評価値が同じか調べる。
+                        if node[0][1] != node[i][1]:
+                            # iの手前までに変更して返す。
+                            return node[:i]
+                    return node
+
+                lmdb_book_modify(db, modify_shrink , progress=True)
+
             elif command.isdigit():
                 # DBの切り替え
                 close_db(db, db_path=db_path)

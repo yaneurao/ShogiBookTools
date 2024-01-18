@@ -1,4 +1,7 @@
+from typing import Callable
+
 import YaneBookLib.LmdbConnection as book_lmdb
+from YaneBookLib.BookCommon import BookNode
 import YaneBookLib.BookIO as book_io
 
 # ============================================================
@@ -60,3 +63,34 @@ def write_lmdb_book_to_standard_book(lmdb_connection : book_lmdb.LMDBConnection,
 
             if progress:
                 print(f"done..{i} sfens")
+
+def lmdb_book_modify(lmdb_connection : book_lmdb.LMDBConnection, modify_func:Callable[[BookNode],BookNode] ,progress:bool=False):
+    """
+    やねうら王標準定跡フォーマットのファイルから読み込んで、LMDBに定跡をstoreする。
+
+    lmdb_connection : LMDBのconnection (openされているものとする)
+    modify_func  : BookNodeを書き換える関数
+    progress     : 進捗を出力する。(ときどき何局面読めたかの数値が表示される。)
+    """
+
+    # DBのトランザクションを作る。これはcursorもらってiterateする用。
+    with lmdb_connection.create_transaction(write=False) as txn:
+        i = 0
+        m = 0
+
+        # 書き込み用のトランザクション。(1万回ごとに作り直す。)
+        write_txn = lmdb_connection.create_transaction(write=True)
+        for (sfen, node) in txn.booknode_cursor():
+            i += 1
+            if progress and i % 100000 == 0:
+                print(f"modify {i} sfens")
+            node2 = modify_func(node)
+            # 内容が書き換わっているならputする。
+            if node != node2:
+                write_txn.put_booknode(sfen, node2)
+                m += 1
+                if m % 10000 == 0:
+                    write_txn.intermediate_commit()
+
+        if progress:
+            print(f"done..{i} sfens , modified {m} nodes.")

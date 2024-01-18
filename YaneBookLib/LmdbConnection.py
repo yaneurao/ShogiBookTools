@@ -39,7 +39,7 @@ class LMDBConnection:
         """
         if self.env:
             txn = self.env.begin(write=write)
-            return LMDBTransaction(self.env, txn)
+            return LMDBTransaction(self.env, txn, write)
         return None
 
     def close(self):
@@ -86,7 +86,7 @@ class LMDBTransaction:
     このclassのinstanceは、LMDBConnection.create_transaction()によって生成される。
     これ以外の方法で作らないようにすること。
     """
-    def __init__(self, env, txn):
+    def __init__(self, env, txn, write:bool):
         """
         このオブジェクトは、LMDBConnectionを用いて生成すること。
         env : openしたDB
@@ -94,6 +94,7 @@ class LMDBTransaction:
         """
         self.env = env
         self.txn = txn
+        self.write = write
 
     def __enter__(self):
         return self
@@ -141,6 +142,11 @@ class LMDBTransaction:
     def close(self):
         # 親切でcommitしておいてやる。
         self.commit()
+
+    def intermediate_commit(self):
+        """一度commit()して次のtransactionを作る"""
+        self.commit() # closeを兼ねる
+        self.txn = self.env.begin(write=self.write)
 
     def drop(self):
         """

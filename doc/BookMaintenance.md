@@ -50,6 +50,8 @@ read book : book/user_book1.db , ignore depth = True
 done..42764 sfens
 ```
 
+💡　定跡DBのPATHは、"my book/book.db"のようにダブルコーテーションで囲ってスペースを含むようなPATHを指定することもできます。
+
 ### やねうら王のDBを書き出す
 
 writeコマンドでいまLMDBに読み込まれている定跡を、やねうら王の定跡DBとして書き出すことができます。
@@ -63,6 +65,8 @@ done..42764 sfens
 💡 書き出しは、SFEN文字列でsortして書き出されるため、ここで書き出したやねうら王の定跡DBは、やねうら王のBookOnTheFlyをオンにした状態で使うことができます。
 
 ⇨　つまり、readコマンドでやねうら王の定跡を読み込んで、writeコマンドで書き出すことによって、定跡のsortが出来ます。
+
+💡　定跡DBのPATHは、"my book/book.db"のようにダブルコーテーションで囲ってスペースを含むようなPATHを指定することもできます。
 
 ### LMDBのクリア
 
@@ -125,6 +129,24 @@ close lmdb/0
 open lmdb/0 DB, map_size = 1 GB, entries = 0
 ```
 
+### 定跡ファイルのshrink
+
+定跡局面で、最善手と同じ評価値を持つもの以外の指し手を削除して、定跡DBファイルを小さくしたい。そんな時に役立つコマンドがshirnkです。
+
+まず、readコマンドでLMDBに定跡を読み込み、shrinkコマンドを実行。そのあとwriteすれば、目的が達成できます。
+```
+open lmdb/0 DB, map_size = 1 GB, entries = 0
+[0] : read book/user_book1.db
+read book : book/user_book1.db , ignore depth = True
+done..42764 sfens
+[0] : shrink
+done..42764 sfens , modified 42727 nodes.
+[0] : write book/user_book1-shrink.db
+write book : book/user_book1-shrink.db
+done..42764 sfens
+[0] : quit
+```
+
 
 # かきかけ
 
@@ -133,41 +155,3 @@ open lmdb/0 DB, map_size = 1 GB, entries = 0
 [0] read book book/user_book1.db
 [0] pv
 ```
-
-
-コマンド一覧(実行後に使えるコマンド)
-
-
-|コマンド|使い方|例|説明|
-|--|--|--|--|
-|数字|[数字]|3|LMDBのN番目のフォルダに切り替える。Nは任意の数。例えば3を指定すると lmdb-3/ と言うデータベースフォルダが自動的に作成されます|
-|db mapsize|db mapsize [map_size]|db mapsize 3| LMDBのデータベースのマップサイズの変更。map sizeは[GB]単位。デフォルトは1[GB]|
-|db delete|db delete| db delete | 作成してあったLMDBのデータベースの削除 |
-|stat|stat|stat| LMDBに格納されている定跡の統計情報(局面数など)を出力|
-|read book|read book [定跡PATH]|read book book/user_book1.db|やねうら王形式の定跡DBのLMDBへの読み込み|
-|write book|write book [定跡PATH]|write book book/user_book2.db|やねうら王形式の定跡DBのLMDBへの書き出し|
-|pv|pv|pv| LMDBに読み込ませたデータベースのPV(最善応手列)を求める|
-|read black|read black [定跡PATH]|read black book/black_book.db|readコマンドの、先手の局面しか読み込まない版|
-|read white|read white [定跡PATH]|read white book/white_book.db|readコマンドの、後手の局面しか読み込まない版|
-|write black|write black [定跡PATH]|write black book/black_book.db|writeコマンドの、先手の局面しか書き出さない版|
-|write white|write white [定跡PATH]|write white book/white_book.db|writeコマンドの、後手の局面しか書き出さない版|
-
-
-LMDBのデータベースのフォルダは番号で管理されています。起動時は0です。これは lmdb-0/ というフォルダをLMDBのデータベースフォルダにする(このフォルダがなければ作成する)という意味です。
-
-起動時に
-
-> [0] 
-
-このように表示されているのは、いま、データベースのターゲットが0(lmdb-0)になっているという意味です。(read bookコマンドやwrite bookコマンドは現在のターゲットに対して行われます。)
-
-活用例
-- 定跡DBをsortしたい　⇨　read bookコマンドで定跡を読み込んでwrite bookコマンドで定跡を書き出すと、局面のSFEN文字列でsortされている定跡ファイル書き出されるので、sortの代用となります。
-- 定跡DBをmergeしたい　⇨　readコマンドを複数回使って複数の定跡をLMDBに読み込み、write bookで書き出すと、定跡のmerge(結合)を行ったことになります。
-- 定跡DBのPVを調べたい　⇨　readコマンドで定跡を読み込んで、pvコマンドでPV(最善応手列)を求めることができます。(USIプロトコルの"startpos moves ..."の形式の棋譜として書き出すことができます。)
-- 先手と後手で別の定跡DBを組み合わせたい　⇨　read blackコマンドで先手の局面だけ角換わりの定跡を読み込み、read whiteコマンドで後手の局面だけ相掛かりの定跡を読み込み、write bookコマンドで書き出すことで、先手と後手との定跡をマージすることができます。
-- LMDBの0番のデータベースが格納されているフォルダ lmdb-0/ の内容をクリアして再度作成したい　⇨　db clear としてから 0 (これはDBを lmdb-0 に切り替えるが、存在しなければ作成されるので、これで作成される。)
-- LMDBのサイズが足りないみたいなので大きくしたい　⇨　db mapsize 10 (DBのサイズを10GBにする)
-
-💡　定跡DBのPATHは、"my book/book.db"のようにダブルコーテーションで囲って1つのPATHを指定することもできます。
-
