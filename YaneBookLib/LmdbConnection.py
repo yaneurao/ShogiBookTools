@@ -29,6 +29,13 @@ class LMDBConnection:
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
 
+        # 既存のサイズを縮めるのは危ないので、
+        # すでにDBファイルがあるなら、そのファイルサイズか指定されたmap_sizeとの大きい方を指定してやる。
+        mdb_path = self.path + "/data.mdb"
+        if os.path.exists(mdb_path):
+            self.map_size = max(self.map_size, os.path.getsize(mdb_path))
+        # ⇨　存在しなかった場合は新規に作られることが確定する。
+
         self.env = lmdb.open(self.path, sync=True, map_size = self.map_size)
         # sync == Trueを指定すると、即座にdiskに書き込むのでこれはTrueが好ましい。
 
@@ -136,8 +143,20 @@ class LMDBTransaction:
                 return value
         return None
 
+    def get_booknode(self, key:str)->BookNode | None:
+        if self.txn:
+            value = self.txn.get(key.encode())
+            if value:
+                return pickle.loads(value)
+        return None
+
     def delete(self, key:bytes):
+        """ bytesを指定してBookNodeを削除。"""
         self.txn.delete(key)
+
+    def delete_booknode(self, key:str):
+        """ SFEN文字列を指定してBookNodeを削除。"""
+        self.txn.delete(key.encode())
 
     def close(self):
         # 親切でcommitしておいてやる。

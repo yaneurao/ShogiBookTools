@@ -46,11 +46,15 @@ quitと入力すると囚虜ぅできます。
 readコマンドでやねうら王の定跡DBを、LMDBに読み込めます。
 ```
 [0] read book/user_book1.db
-read book : book/user_book1.db , ignore depth = True
+read book : book/user_book4.db , ignore_depth = True, trim_ply = False
 done..42764 sfens
 ```
 
 💡　定跡DBのPATHは、"my book/book.db"のようにダブルコーテーションで囲ってスペースを含むようなPATHを指定することもできます。
+
+⚠　ignore_depth = Trueと表示されているのは、depthを無視するということです。depthは読み込まれません。depthも読み込みたい時は、"ignore_depth true"(trueは単にtや1でも可)と入力します。これで以降のreadコマンドではdepthも読み込まれます。
+
+⚠　trim_ply = Falseと表示されているのは、定跡DBのSFEN文字列(局面を表す文字列)の末尾についている手数(ply)をトリム(削除)するかどうかについてです。trim_ply = Falseなら削除しません。これを削除するように設定するには、"trim_ply true"(trueは単にtや1でも可)と入力します。これで以降のreadコマンドはplyを削除しながら読み込みます。
 
 ### やねうら王のDBを書き出す
 
@@ -137,7 +141,7 @@ open lmdb/0 DB, map_size = 1 GB, entries = 0
 ```
 open lmdb/0 DB, map_size = 1 GB, entries = 0
 [0] : read book/user_book1.db
-read book : book/user_book1.db , ignore depth = True
+read book : book/user_book1.db , ignore depth = True,  trim_ply = False
 done..42764 sfens
 [0] : shrink
 done..42764 sfens , modified 42727 nodes.
@@ -147,11 +151,35 @@ done..42764 sfens
 [0] : quit
 ```
 
+### 手数のついていない定跡ファイルに手数をつける
 
-# かきかけ
+手数がついていない定跡ファイルに手数をつけるコマンドは、 add_ply コマンドです。
+
+これは、初期局面から最短で到達できる手数を付与します。readコマンドで定跡を読み込み、add_plyコマンドを実行し、writeコマンドで定跡を書き出せば、手数のついている定跡ファイルが書き出されます。
 
 ```
-# 定跡のPVを書き出したい
-[0] read book book/user_book1.db
-[0] pv
+open lmdb/0 DB, map_size = 10 GB, entries = 42764
+[0] : clear
+// ⇨　以前起動してた時に読み込んだものが残っている。clearコマンドでクリアする。
+clear lmdb/0
+[0] : trim_ply true
+// ⇨　いまの定跡DBに手数として0がついているのでそれを削除しながらLMDBに読み込む。
+trim_ply = True
+[0] : read book/user_book4.db
+read book : book/user_book4.db , ignore_depth = True, trim_ply = True
+done..42764 sfens
+[0] : add_ply
+// ⇨　add_plyコマンドの実行
+10000 sfens , 710 queued.
+20000 sfens , 746 queued.
+30000 sfens , 574 queued.
+40000 sfens , 171 queued.
+done, 42703 sfens.
+[0] : write book/user_book4_ply.db
+// ⇨　ファイルに書き出す。
+write book : book/user_book4_ply.db
+Number of entries:42764
+done..42764 sfens
+[0] : quit
+quit..
 ```

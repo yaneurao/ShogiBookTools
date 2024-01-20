@@ -53,6 +53,9 @@ def close_db(db:LMDBConnection, db_path:str):
         print(f"close {db_path}")
         db.close()
 
+def is_true(s:str)->bool:
+    """文字列がtrueっぽいかどうかを判定する。"""
+    return s.lower().startswith('t') or s == '1'
 
 def main():
     # 起動時のDBフォルダ番号
@@ -65,6 +68,7 @@ def main():
     db = open_db(db_path)
 
     ignore_depth : bool = True
+    trim_ply : bool = False
 
     while True:
         try:
@@ -103,7 +107,7 @@ def main():
                     print("Error! : book_path needed")
                     continue
                 book_path = commands[1]
-                read_standard_book_to_lmdb_book(db, book_path, ignore_depth=ignore_depth, progress=True)
+                read_standard_book_to_lmdb_book(db, book_path, ignore_depth=ignore_depth, trim_ply=trim_ply, progress=True)
 
             elif command == "write":
                 # LMDBからやねうら王の定跡ファイルに書き出す。
@@ -118,8 +122,16 @@ def main():
                 if len(commands) < 2:
                     print("Error! : true or false , write it afterword")
                     continue
-                ignore_depth = commands[1].lower() == "true"
+                ignore_depth = is_true(commands[1])
                 print(f"ignore_depth = {'True' if ignore_depth else 'False'}")
+
+            elif command == "trim_ply":
+                # ignore_depthの値を変更。
+                if len(commands) < 2:
+                    print("Error! : true or false , write it afterword")
+                    continue
+                trim_ply = is_true(commands[1])
+                print(f"trim_ply = {'True' if trim_ply else 'False'}")
 
             elif command == "map_size":
                 # map_sizeの変更
@@ -144,6 +156,10 @@ def main():
                     return node
 
                 lmdb_book_modify(db, modify_shrink , progress=True)
+
+            elif command == "add_ply":
+                # 手数のついていないLMDBに格納されたSFEN文字列に対して手数を付与する。
+                lmdb_book_add_ply(db, ["startpos"], progress=True)
 
             elif command.isdigit():
                 # DBの切り替え
