@@ -161,6 +161,21 @@ def main():
                 # 手数のついていないLMDBに格納されたSFEN文字列に対して手数を付与する。
                 lmdb_book_add_ply(db, ["startpos"], progress=True)
 
+            elif command == "filter":
+                # filterコマンド。局面の列挙中に filters/XXXX.py を execで実行する。
+                if len(commands) < 2:
+                    print("Error! : filter filename needed!")
+                    continue
+                filter_path = os.path.join("filters", commands[1]+'.py')
+                if not os.path.exists(filter_path):
+                    print(f"Error! filter not found! file = {filter_path}")
+                    continue
+                print(f"filter = {filter_path}")
+                with open(filter_path, 'r', encoding='utf-8') as f:
+                    filter = f.read()
+
+                lmdb_book_filter(db, filter=filter, progress=True)
+
             elif command.isdigit():
                 # DBの切り替え
                 close_db(db, db_path=db_path)

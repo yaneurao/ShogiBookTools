@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from typing import Callable
 from collections import deque
 
@@ -24,6 +26,7 @@ def read_standard_book_to_lmdb_book(lmdb_connection : LMDBConnection, read_path 
     # BookReaderを用いて、やねうら王形式の定跡ファイルの1局面ずつの読み込みができる。
     with StandardBookReader(read_path) as reader:
         reader.set_ignore_depth(ignore_depth)
+        reader.set_trim_ply(trim_ply)
 
         # DBのトランザクションを作る
         with lmdb_connection.create_transaction(write=True) as txn:
@@ -157,3 +160,41 @@ def lmdb_book_add_ply(lmdb_connection:LMDBConnection, root_sfens:list[str], prog
 
     if progress:
         print(f"done, {i} sfens.")
+
+
+def lmdb_book_filter(lmdb_connection:LMDBConnection, filter:str, progress:bool=False):
+    """LMDB上の各局面に対して、filterを実行する。"""
+
+    i = 0
+    m = 0
+
+    with lmdb_connection.create_transaction(write=False) as read_txn:
+        with lmdb_connection.create_transaction(write=True) as write_txn:
+            def inc_m():
+                nonlocal m
+                m += 1
+                if m % 10000 == 0:
+                    write_txn.intermediate_commit()
+            
+            for (sfen, book_node) in read_txn.booknode_cursor():
+                book_node_org = deepcopy(book_node)
+                
+                # exec()のなかでbook_nodeは何らかの改変を受ける。
+                loc = locals()
+                exec(filter, globals(), loc)
+                book_node = loc['book_node']
+
+                if book_node is None:
+                    # execのなかでbook_node = Noneにされたならこのentryを削除する
+                    write_txn.delete_booknode(sfen)
+                    inc_m()
+                elif book_node != book_node_org:
+                    # 内容が書き換わっているので書き戻す。
+                    write_txn.put_booknode(sfen, book_node)
+                    inc_m()
+                i += 1
+                if i % 10000 == 0 and progress:
+                    print(f"{i} sfens , modified = {m}")
+
+    if progress:
+        print(f"done.. {i} sfens")
