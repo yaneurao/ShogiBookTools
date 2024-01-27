@@ -10,8 +10,6 @@ class StandardBookReader:
         self.file : io.TextIOWrapper | None = None
         # 定跡局面の指し手に付随しているdepthを無視するかどうか
         self.ignore_depth : bool = True
-        # 定跡局面のSFEN文字列に付随しているplyを無視するかどうか
-        self.trim_ply : bool = True
 
     def open(self, filename:str):
         self.file = open(filename, mode='r', encoding='utf-8')
@@ -50,10 +48,7 @@ class StandardBookReader:
             if line.startswith('#'):
                 pass
             elif line.startswith('sfen'):
-                if self.trim_ply:
-                    sfen = trim_sfen(line)
-                else:
-                    sfen = line.strip()
+                sfen = trim_sfen(line)
 
                 # 指し手の読み込み..
                 book_node:BookNode = []
@@ -79,10 +74,6 @@ class StandardBookReader:
     def set_ignore_depth(self, b:bool):
         '''定跡局面に付随しているdepthを無視するのかどうかのフラグを変更する。デフォルトではtrue。(無視する)'''
         self.ignore_depth = b
-
-    def set_trim_ply(self, b:bool):
-        '''定跡局面のSFENに付随しているplyをtrimするかどうかのフラグを変更する。デフォルトですtrue。(トリムする)'''
-        self.trim_ply = b
 
     def peek_line(self)->str|None:
         '''1行先読み用'''
@@ -127,4 +118,10 @@ class StandardBookWriter:
         self.writeline(f"sfen {sfen}")
         for move, eval , *etc in node:
             self.writeline(f"{move} None {eval} {etc[0] if etc else 0}")
+        self.flush()
+
+    def flush(self):
+        """ flushする。"""
+        if self.file:
+            self.file.flush()
 

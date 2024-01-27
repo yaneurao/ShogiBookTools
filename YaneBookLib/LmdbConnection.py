@@ -39,6 +39,12 @@ class LMDBConnection:
         self.env = lmdb.open(self.path, sync=True, map_size = self.map_size)
         # sync == Trueを指定すると、即座にdiskに書き込むのでこれはTrueが好ましい。
 
+    def reopen(self):
+        """OSのcache使用量を下げるためにいったん閉じて再度openする"""
+        if self.is_opened():
+            self.close()
+            self.open()
+
     def create_transaction(self, write=False)->"LMDBTransaction":
         """
         write = Trueだと書き込めるtransaction。
@@ -66,6 +72,9 @@ class LMDBConnection:
             return self.env.info()
         else:
             raise RuntimeError("DB is not opened.")
+        
+    def get_env(self):
+        return self.env
 
 class LMDBCursor:
     def __init__(self, cursor):
@@ -142,8 +151,8 @@ class LMDBTransaction:
             if value:
                 return value
         return None
-
-    def get_booknode(self, key:str)->BookNode | None:
+    
+    def get_booknode(self, key:str)->BookNode:
         if self.txn:
             value = self.txn.get(key.encode())
             if value:
@@ -151,12 +160,7 @@ class LMDBTransaction:
         return None
 
     def delete(self, key:bytes):
-        """ bytesを指定してBookNodeを削除。"""
         self.txn.delete(key)
-
-    def delete_booknode(self, key:str):
-        """ SFEN文字列を指定してBookNodeを削除。"""
-        self.txn.delete(key.encode())
 
     def close(self):
         # 親切でcommitしておいてやる。
