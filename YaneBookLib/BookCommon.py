@@ -9,6 +9,8 @@ Move  = str
 Eval  = int
 # やねうら王形式の定跡DBファイルに書き出す時の指し手に対応する探索深さ
 Depth = int
+# 手番
+Color = int
 
 # やねうら王形式の定跡DBの1つの局面情報を表現する型
 BookNode = list[tuple[Move,Eval] | tuple[Move,Eval,Depth]]
@@ -47,6 +49,21 @@ def trim_sfen(sfen:str, trim_ply:bool = True)->Sfen:
             pass
 
     return " ".join(s)
+
+def sfen_ply(sfen:str)->int:
+    '''SFEN文字列の末尾に書いてある手数を抽出する。手数が書かれていなければ0が返る。'''
+    a = sfen.split()
+    if len(a) == 0:
+        return 0
+    try:
+        return int(a[-1])
+    except:
+        return 0
+
+def sfen_color(sfen:str)->Color:
+    '''SFEN文字列の手番を返す。'''
+    # wは駒には使わない文字なのでこの文字があれば後手の局面だとわかる。
+    return WHITE if 'w' in sfen else BLACK # type:ignore
 
 def UsiKifToSfens(kif:str)->list[str]:
     """

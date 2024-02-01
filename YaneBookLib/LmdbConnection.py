@@ -165,7 +165,7 @@ class LMDBTransaction:
                 return value
         return None
     
-    def get_booknode(self, key:str)->BookNode:
+    def get_booknode(self, key:str)->BookNode | None:
         if self.txn:
             value = self.txn.get(key.encode())
             if value:
@@ -175,6 +175,10 @@ class LMDBTransaction:
     def delete(self, key:bytes):
         self.txn.delete(key)
 
+    def delete_booknode(self, key:str):
+        """ SFEN文字列を指定してBookNodeを削除。"""
+        self.txn.delete(key.encode())
+        
     def close(self):
         # 親切でcommitしておいてやる。
         self.commit()

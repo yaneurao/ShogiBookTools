@@ -78,6 +78,10 @@ class StandardBookReader:
         '''定跡局面に付随しているdepthを無視するのかどうかのフラグを変更する。デフォルトではtrue。(無視する)'''
         self.ignore_depth = b
 
+    def set_trim_ply(self, b:bool):
+        '''定跡局面のSFENに付随しているplyをtrimするかどうかのフラグを変更する。デフォルトですtrue。(トリムする)'''
+        self.trim_ply = b
+
     def peek_line(self)->str|None:
         '''1行先読み用'''
         # 前回読み込んだやつがあるならそれを返す。

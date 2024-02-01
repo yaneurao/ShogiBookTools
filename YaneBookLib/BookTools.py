@@ -1,6 +1,8 @@
+from copy import deepcopy
 from typing import Callable
 
-import YaneBookLib.LmdbConnection as book_lmdb
+from collections import deque
+from YaneBookLib.LmdbConnection import *
 from YaneBookLib.BookCommon import BookNode
 import YaneBookLib.BookIO as book_io
 
@@ -8,7 +10,7 @@ import YaneBookLib.BookIO as book_io
 #                   Helper Functions
 # ============================================================
 
-def read_standard_book_to_lmdb_book(lmdb_connection : book_lmdb.LMDBConnection, read_path : str , ignore_depth:bool, trim_ply:bool=True, progress:bool=False, intermediate_reopen:bool=False):
+def read_standard_book_to_lmdb_book(lmdb_connection : LMDBConnection, read_path : str , ignore_depth:bool, trim_ply:bool=True, progress:bool=False, intermediate_reopen:bool=False):
     """
     やねうら王標準定跡フォーマットのファイルから読み込んで、LMDBに定跡をstoreする。
 
@@ -52,7 +54,7 @@ def read_standard_book_to_lmdb_book(lmdb_connection : book_lmdb.LMDBConnection, 
             print(f"done..{i} sfens")
 
 
-def write_lmdb_book_to_standard_book(lmdb_connection : book_lmdb.LMDBConnection, write_path : str, progress:bool=False,intermediate_reopen:bool=False):
+def write_lmdb_book_to_standard_book(lmdb_connection : LMDBConnection, write_path : str, progress:bool=False,intermediate_reopen:bool=False):
     """
     LMDBにstoreした定跡をやねうら王標準定跡フォーマットでファイルに書き出す。
     
@@ -98,7 +100,7 @@ def write_lmdb_book_to_standard_book(lmdb_connection : book_lmdb.LMDBConnection,
         if progress:
             print(f"done..{i} sfens")
 
-def lmdb_book_modify(lmdb_connection : book_lmdb.LMDBConnection, modify_func:Callable[[BookNode],BookNode] ,progress:bool=False):
+def lmdb_book_modify(lmdb_connection : LMDBConnection, modify_func:Callable[[BookNode],BookNode] ,progress:bool=False):
     """
     やねうら王標準定跡フォーマットのファイルから読み込んで、LMDBに定跡をstoreする。
 
@@ -129,3 +131,88 @@ def lmdb_book_modify(lmdb_connection : book_lmdb.LMDBConnection, modify_func:Cal
         write_txn.close()
         if progress:
             print(f"done..{i} sfens , modified {m} nodes.")
+
+def lmdb_book_filter(lmdb_connection:LMDBConnection, filter:str, progress:bool=False):
+    """LMDB上の各局面に対して、filterを実行する。"""
+
+    i = 0
+    m = 0
+
+    with lmdb_connection.create_transaction(write=False) as read_txn:
+        with lmdb_connection.create_transaction(write=True) as write_txn:
+            def inc_m():
+                nonlocal m
+                m += 1
+                if m % 10000 == 0:
+                    write_txn.intermediate_commit()
+
+            for (sfen, book_node) in read_txn.booknode_cursor():
+                book_node_org = deepcopy(book_node)
+
+                # exec()のなかでbook_nodeは何らかの改変を受ける。
+                loc = locals()
+                exec(filter, globals(), loc)
+                book_node = loc['book_node']
+
+                if book_node is None:
+                    # execのなかでbook_node = Noneにされたならこのentryを削除する
+                    write_txn.delete_booknode(sfen)
+                    inc_m()
+                elif book_node != book_node_org:
+                    # 内容が書き換わっているので書き戻す。
+                    write_txn.put_booknode(sfen, book_node)
+                    inc_m()
+                i += 1
+                if i % 10000 == 0 and progress:
+                    print(f"{i} sfens , modified = {m}")
+
+    if progress:
+        print(f"done.. {i} sfens")
+
+# 手数のついていないLMDBに格納されたSFEN文字列に対して手数を付与する。
+def lmdb_book_add_ply(lmdb_connection:LMDBConnection, root_sfens:list[str], progress:bool=False):
+    # 書き込み用のトランザクション。(1万回ごとに作り直す。)
+    with lmdb_connection.create_transaction(write=True) as txn:
+
+        # 処理した個数
+        i = 0
+
+        queue : deque[str] = deque()
+        board = Board()
+        for root_sfen in root_sfens:
+            # root_sfenから辿っていく。
+            board.set_position(root_sfen)
+            queue.append(board.sfen())
+
+            while queue:
+                sfen = queue.popleft()
+                sfen_trimmed = trim_sfen(sfen)
+                book_node = txn.get_booknode(sfen_trimmed)
+                if book_node is None:
+                    continue
+
+                # この局面は手数つきで書き出したので処理済みだから削除。
+                txn.delete_booknode(sfen_trimmed)
+
+                # このnodeがあったので、手数が確定したから書き出しておく。
+                txn.put_booknode(sfen, book_node)
+
+                # progress
+                i += 1
+                if i % 10000 == 0:
+                    txn.intermediate_commit()
+                    if progress:
+                        print(f"{i} sfens , {len(queue)} queued.")
+
+                # book_nodeの指し手で進めた局面をqueueに積む
+                board.set_position('sfen ' + sfen)
+                for move , *_ in book_node:
+                    board.push_usi(move)
+                    sfen = board.sfen() # 手数がついているはず
+                    # このsfenのnodeが未処理であるならqueueに積む。
+                    if txn.get_booknode(trim_sfen(sfen)):
+                        queue.append(sfen)
+                    board.pop()
+
+    if progress:
+        print(f"done, {i} sfens.")
