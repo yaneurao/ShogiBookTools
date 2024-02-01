@@ -22,10 +22,14 @@ YANEURAOU_BOOK_HEADER_V1 = "#YANEURAOU-DB2016 1.00"
 #             SFEN Helper Function
 # ============================================================
 
-def trim_sfen(sfen:str)->Sfen:
+def trim_sfen(sfen:str, trim_ply:bool = True)->Sfen:
     '''
     "sfen"で開始される形式のSFEN文字列(ただし先頭の"sfen"は含まなくても良い)に対して、
-    末尾の手数を取り除いて返す。 また先頭に"sfen"の文字があればそれも取り除く。
+    末尾の手数を取り除いて返す。
+    
+    また先頭に"sfen"の文字があればそれも取り除く。
+
+    trim_ply : 末尾の手数を取り除くのかのフラグ
     '''
     s = sfen.split()
 
@@ -33,13 +37,14 @@ def trim_sfen(sfen:str)->Sfen:
     if s[0] == 'sfen':
         del s[0]
 
-    try:
-        # 末尾が数字なのかテストする
-        int(s[-1])
-        del s[-1]
-    except:
-        # 数字が付与されてないんじゃ？
-        pass
+    if trim_ply:
+        try:
+            # 末尾が数字なのかテストする
+            int(s[-1])
+            del s[-1]
+        except:
+            # 数字が付与されてないんじゃ？
+            pass
 
     return " ".join(s)
 

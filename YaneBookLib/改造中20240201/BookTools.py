@@ -22,7 +22,7 @@ def read_standard_book_to_lmdb_book(lmdb_connection : book_lmdb.LMDBConnection, 
     """
 
     # BookReaderを用いて、やねうら王形式の定跡ファイルの1局面ずつの読み込みができる。
-    with book_io.StandardBookReader(read_path, ignore_depth=ignore_depth, trim_ply=trim_ply) as reader:
+    with book_io.StandardBookReader(read_path,trim_ply=trim_ply, ignore_depth=ignore_depth) as reader:
 
         # DBのトランザクションを作る
         txn = lmdb_connection.create_transaction(write=True)
@@ -52,7 +52,7 @@ def read_standard_book_to_lmdb_book(lmdb_connection : book_lmdb.LMDBConnection, 
             print(f"done..{i} sfens")
 
 
-def write_lmdb_book_to_standard_book(lmdb_connection : book_lmdb.LMDBConnection, write_path : str, progress:bool=False,intermediate_reopen:bool=False):
+def write_lmdb_book_to_standard_book(lmdb_connection : book_lmdb.LMDBConnection, write_path : str, progress:bool=False):
     """
     LMDBにstoreした定跡をやねうら王標準定跡フォーマットでファイルに書き出す。
     
@@ -65,35 +65,40 @@ def write_lmdb_book_to_standard_book(lmdb_connection : book_lmdb.LMDBConnection,
     """
 
     with book_io.StandardBookWriter(write_path) as writer:
-        with lmdb_connection.create_transaction(write=False) as txn:
-            if progress:
-                print(f"write book : {write_path}")
-
-            stats = txn.stat() # type:ignore
-            # キーの数を表示
-            num_of_entries : int = stats['entries'] # type:ignore
-            print(f"Number of entries:{num_of_entries}")
-            writer.writeline(f"# NOE:{num_of_entries},SORTED")
-
+        txn = lmdb_connection.create_transaction(write=False)
         i = 0
-        def write_100k(next:str|None=None)->str|None:
-            nonlocal i
-            lmdb_connection.reopen()
-            with lmdb_connection.create_transaction(write=False) as txn:
-                for (sfen, node) in txn.booknode_cursor(next):
-                    writer.write(sfen, node)
-                    i += 1
-                    if i % 100000 == 0:
-                        if progress:
-                            print(f"write {i} sfens")
-                        # 続きはこのsfenの次からやって欲しい
-                        return sfen
-            return "EOF"
+        if progress:
+            print(f"write book : {write_path}")
 
-        # 10kずつ書き出す
-        next = None
-        while next != "EOF":
-            next = write_100k(next)
+        stats = txn.stat() # type:ignore
+        # キーの数を表示
+        num_of_entries : int = stats['entries'] # type:ignore
+        print(f"Number of entries:{num_of_entries}")
+        writer.writeline(f"# NOE:{num_of_entries},SORTED")
+
+        # ⇨　これ良くないな…。cursorが自動的にreopenする機能を有するべきか…。
+
+        cursor = txn.booknode_cursor()
+        while True:
+            (sfen, node) = (cursor.key() , cursor.value())
+            writer.write(sfen, node)
+            i += 1
+            if not cursor.next():
+                break
+
+            if i % 10 == 0:
+                if progress:
+                    print(f"write {i} sfens")
+
+                # DBを再openしてcursor再取得する。
+                next_key = cursor.key()
+                txn.close()
+                lmdb_connection.reopen()
+                txn = lmdb_connection.create_transaction(write=False)
+                cursor = txn.booknode_cursor()
+                cursor.set_range(next_key)
+        
+        txn.close()
 
         if progress:
             print(f"done..{i} sfens")
@@ -126,6 +131,5 @@ def lmdb_book_modify(lmdb_connection : book_lmdb.LMDBConnection, modify_func:Cal
                 if m % 10000 == 0:
                     write_txn.intermediate_commit()
 
-        write_txn.close()
         if progress:
             print(f"done..{i} sfens , modified {m} nodes.")

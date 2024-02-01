@@ -3,13 +3,15 @@ from YaneBookLib.BookCommon import *
 
 class StandardBookReader:
     """やねうら王標準定跡フォーマットの読み込みclass"""
-    def __init__(self, filename:str):
+    def __init__(self, filename:str, ignore_depth:bool=True, trim_ply:bool = True):
         # openするfilepth
         self.filename = filename
         # openしているfile handle
         self.file : io.TextIOWrapper | None = None
         # 定跡局面の指し手に付随しているdepthを無視するかどうか
-        self.ignore_depth : bool = True
+        self.ignore_depth : bool = ignore_depth
+        # SFEN文字列の末尾の手数をtrimするのか
+        self.trim_ply : bool = trim_ply
 
     def open(self, filename:str):
         self.file = open(filename, mode='r', encoding='utf-8')
@@ -48,7 +50,8 @@ class StandardBookReader:
             if line.startswith('#'):
                 pass
             elif line.startswith('sfen'):
-                sfen = trim_sfen(line)
+                # 先頭の'sfen'の文字と末尾に付随している手数を削除する。
+                sfen = trim_sfen(line, trim_ply=self.trim_ply)
 
                 # 指し手の読み込み..
                 book_node:BookNode = []

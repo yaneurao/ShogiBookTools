@@ -77,15 +77,9 @@ class LMDBConnection:
         return self.env
 
 class LMDBCursor:
-    def __init__(self, cursor, next_key:str|None):
+    def __init__(self, cursor):
         self.cursor = cursor
-        if next_key is not None:
-            # 指定されたキーの次にカーソルをセット
-            cursor.set_range(next_key.encode())
-            cursor.next()
-        else:
-            # 最初の要素にカーソルをセット
-            cursor.first()
+        self.cursor.first()
 
     def __enter__(self):
         return self
@@ -97,17 +91,26 @@ class LMDBCursor:
         return self
 
     def __next__(self)->tuple[str,Any]:
-        # 末尾に達した時、keyはb''になるんだよなー。
-        if self.cursor.key() == b'':
+        try:
+            self.cursor.next()
+            return self.cursor.key().decode() , pickle.loads(self.cursor.value())
+        except:
             raise StopIteration
 
-        key = self.cursor.key().decode()
-        value = pickle.loads(self.cursor.value())
+    def key(self)->str:
+        '''現在のcursor位置のkeyの取得'''
+        return self.cursor.key().decode()
 
-        # 次の要素に進む
-        self.cursor.next()
+    def value(self)->BookNode:
+        return pickle.loads(self.cursor.value())
 
-        return key, value
+    def next(self)->bool:
+        '''次の要素があるかの判定'''
+        return bool(self.cursor.next())
+
+    def set_range(self, key:str):
+        ''' keyのところまでseekする。'''
+        self.cursor.set_range(key.encode())
 
 class LMDBTransaction:
     """
@@ -133,9 +136,8 @@ class LMDBTransaction:
     def cursor(self):
         return self.txn.cursor()
     
-    def booknode_cursor(self, next_key:str|None = None):
-        """next : この文字列の次のkeyから書き出す。Noneが指定されれば先頭から"""
-        return LMDBCursor(self.txn.cursor(), next_key)
+    def booknode_cursor(self):
+        return LMDBCursor(self.txn.cursor())
 
     def stat(self):
         return self.txn.stat()

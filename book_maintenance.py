@@ -3,6 +3,7 @@
 
 import os
 import shlex
+import traceback
 
 from YaneBookLib.LmdbConnection import *
 from YaneBookLib.BookIO import *
@@ -186,6 +187,7 @@ def main():
                 print(f"Unknown Command : {command}")
         except Exception as e:
             print(f"Exception : {str(e)}")
+            traceback.print_exception(e)
 
 if __name__ == "__main__":
     main()
