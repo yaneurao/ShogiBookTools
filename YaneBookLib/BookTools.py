@@ -67,15 +67,15 @@ def write_lmdb_book_to_standard_book(lmdb_connection : LMDBConnection, write_pat
     """
 
     with book_io.StandardBookWriter(write_path) as writer:
-        with lmdb_connection.create_transaction(write=False) as txn:
-            if progress:
-                print(f"write book : {write_path}")
+        if progress:
+            print(f"write book : {write_path}")
 
-            stats = txn.stat() # type:ignore
-            # キーの数を表示
-            num_of_entries : int = stats['entries'] # type:ignore
-            print(f"Number of entries:{num_of_entries}")
-            writer.writeline(f"# NOE:{num_of_entries},SORTED")
+            # エントリー数をいったん出力
+            with lmdb_connection.create_transaction(write=False) as txn:
+                stats = txn.stat() # type:ignore
+                # キーの数を表示
+                num_of_entries : int = stats['entries'] # type:ignore
+                print(f"Number of entries : {num_of_entries}")
 
         i = 0
         def write_100k(next:str|None=None)->str|None:
@@ -99,6 +99,13 @@ def write_lmdb_book_to_standard_book(lmdb_connection : LMDBConnection, write_pat
 
         if progress:
             print(f"done..{i} sfens")
+
+        # エントリー数は別ファイルに書き出しておく。
+        # ファイル名は、定跡ファイル名(末尾の".db"は取り除いて) + ".tag"
+        tag_file = write_path.rsplit('.', 1)[0] + ".tag"
+        with open(tag_file, 'w') as f:
+            f.write(f"Entries:{i}\n")
+
 
 def lmdb_book_modify(lmdb_connection : LMDBConnection, modify_func:Callable[[BookNode],BookNode] ,progress:bool=False):
     """

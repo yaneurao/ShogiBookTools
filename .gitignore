@@ -20,6 +20,8 @@ book/
 資料/
 lmdb/
 dev-script/
+*.db
+*.tag
 
 # User-specific files
 *.suo
